@@ -31,8 +31,11 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// Serve uploaded images statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // API endpoint for file upload
-app.post('/upload', upload.single('file'), (req, res) => {
+app.post('/upload', upload.single('profilePic'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -40,8 +43,9 @@ app.post('/upload', upload.single('file'), (req, res) => {
 });
 
 // CRUD operations
-app.post('/employees', (req, res) => {
-    const { name, position, salary, profilePic, phoneNumber, email } = req.body;
+app.post('/employees', upload.single('profilePic'), (req, res) => {
+    const { name, position, salary, phoneNumber, email } = req.body;
+    const profilePic = req.file ? req.file.filename : ''; 
     const employee = new Employee({
         name,
         position,
@@ -73,7 +77,16 @@ app.get('/employees/:id', (req, res) => {
 });
 
 app.put('/employees/:id', (req, res) => {
-    Employee.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    const { name, position, salary, phoneNumber, email } = req.body;
+    const profilePic = req.file ? req.file.filename : ''; 
+    Employee.findByIdAndUpdate(req.params.id, {
+        name,
+        position,
+        salary,
+        profilePic,
+        phoneNumber,
+        email
+    }, { new: true })
         .then(employee => {
             if (!employee) {
                 return res.status(404).json({ error: 'Employee not found' });
@@ -97,3 +110,4 @@ app.delete('/employees/:id', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port http://localhost:${PORT}`);
 });
+
