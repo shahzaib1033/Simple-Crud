@@ -6,6 +6,8 @@ const bodyParser = require('body-parser');
 const Employee = require('./Employee');
 const cors = require('cors');
 require('dotenv').config();
+const fs = require('fs');
+
 
 const app = express();
 app.use(cors());
@@ -19,33 +21,85 @@ mongoose.connect(process.env.DATABASE, { useNewUrlParser: true, useUnifiedTopolo
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Multer Configuration for file upload
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, './uploads/');
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
+const uploads = async (req, res, next) => {
+    try {
 
-const upload = multer({ storage: storage });
+        var fileName
+        const storage = multer.diskStorage({
+            destination: (req, file, cb) => {
+                const publicDir = path.join("", 'public');
+                const imagesDir = path.join(publicDir, 'images');
+                // create the directories if they don't exist
+                if (!fs.existsSync(publicDir)) {
+                    fs.mkdirSync(publicDir);
+                }
+                if (!fs.existsSync(imagesDir)) {
+                    fs.mkdirSync(imagesDir);
+                }
+                console.log('i am here to upload');
+
+                cb(null, imagesDir);
+            },
+            filename: async (req, file, cb) => {
+                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+                fileName = file.fieldname + '-' + uniqueSuffix + '.' + file.originalname.split('.').pop();
+                console.log(fileName);
+                console.log('i am here to upload');
+
+
+                // req.imagePath = fileName;
+                cb(null, fileName);
+            },
+        });
+        const upload = multer({ storage }).single('file');
+        upload(req, res, (err) => {
+            if (err) {
+                console.log(err);
+            }
+            else {
+                console.log(fileName)
+                let imagePath =  fileName;
+
+
+                req.imagePath = imagePath,
+
+                    next();
+            }
+        });
+    }
+    catch (err) {
+        console.log(err);
+        return res.status(500).send('error')
+
+    }
+}
+
 
 // Serve uploaded images statically
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/", express.static(path.join("", "public/images")))
 
 // API endpoint for file upload
-app.post('/upload', upload.single('profilePic'), (req, res) => {
-    if (!req.file) {
+app.post('/upload', uploads, (req, res) => {
+    const imagePath = req.imagePath;
+    if (!imagePath) {
+        return useSuccessResponse(res, 'empty feild', 404)
+    }
+    const host = process.env.HOST
+
+    console.log(host)
+    const ImagePath = host + "" + imagePath;
+    console.log(`Uploading ${ImagePath}`);
+    if (!req.imagePath) {
         return res.status(400).json({ error: 'No file uploaded' });
     }
-    res.json({ filename: req.file.filename });
+    res.json({ filename: imagePath });
 });
 
 // CRUD operations
-app.post('/employees', upload.single('profilePic'), (req, res) => {
-    const { name, position, salary, phoneNumber, email } = req.body;
-    const profilePic = req.file ? req.file.filename : ''; 
+app.post('/employees',uploads, (req, res) => {
+    const { name, position, salary, phoneNumber, email,profilePic1 } = req.body;
+    const profilePic = profilePic1 || req.imagePath||""; 
     const employee = new Employee({
         name,
         position,
