@@ -114,7 +114,14 @@ app.post('/employees',uploads, (req, res) => {
 });
 
 app.get('/employees', (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.pageSize) || 10;
+
+    const skip = (page - 1) * pageSize;
+
     Employee.find()
+        .skip(skip)
+        .limit(pageSize)
         .then(employees => res.json(employees))
         .catch(err => res.status(500).json({ error: err.message }));
 });
