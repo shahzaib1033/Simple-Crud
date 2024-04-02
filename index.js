@@ -113,18 +113,30 @@ app.post('/employees',uploads, (req, res) => {
         .catch(err => res.status(400).json({ error: err.message }));
 });
 
-app.get('/employees', (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const pageSize = parseInt(req.query.pageSize) || 10;
+app.get('/employees', async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const pageSize = parseInt(req.query.pageSize) || 10;
 
-    const skip = (page - 1) * pageSize;
+        const skip = (page - 1) * pageSize;
 
-    Employee.find()
-        .skip(skip)
-        .limit(pageSize)
-        .then(employees => res.json(employees))
-        .catch(err => res.status(500).json({ error: err.message }));
+        const totalCount = await Employee.countDocuments();
+        const employees = await Employee.find()
+            .skip(skip)
+            .limit(pageSize);
+
+        res.json({
+            totalCount: totalCount,
+            currentPage: page,
+            pageSize: pageSize,
+            totalPages: Math.ceil(totalCount / pageSize),
+            employees: employees
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
+
 
 app.get('/employees/:id', (req, res) => {
     Employee.findById(req.params.id)
