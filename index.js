@@ -131,13 +131,13 @@ app.get('/employees/:id', (req, res) => {
 });
 
 app.put('/employees/:id', (req, res) => {
-    const { name, position, salary, phoneNumber, email } = req.body;
-    const profilePic = req.file ? req.file.filename : ''; 
+    const { name, position, salary, phoneNumber, email,profilePic } = req.body;
+    const profilePic1 =profilePic|| req.file ? req.file.filename : ''; 
     Employee.findByIdAndUpdate(req.params.id, {
         name,
         position,
         salary,
-        profilePic,
+        profilePic: profilePic1,
         phoneNumber,
         email
     }, { new: true })
